@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#06141d" />
+  <title>DeepCore: Worlds Beneath</title>
+  <style>
+    :root { color-scheme: dark; --ink:#d9faff; --cyan:#49e8f7; --panel:rgba(7,22,31,.86); }
+    * { box-sizing:border-box } body { margin:0; background:#02070c; color:var(--ink); font:14px/1.35 Inter,ui-sans-serif,system-ui,sans-serif; overflow:hidden }
+    canvas { display:block; width:100vw; height:100vh; image-rendering:pixelated; cursor:crosshair }
+    #brand { position:fixed; top:22px; left:28px; pointer-events:none; text-transform:uppercase; letter-spacing:.19em; font-weight:800; font-size:18px; text-shadow:0 2px 10px #000 }
+    #brand small { color:var(--cyan); display:block; letter-spacing:.25em; font-size:9px; margin-top:4px }
+    #hud { position:fixed; right:24px; top:22px; width:226px; background:var(--panel); border:1px solid rgba(73,232,247,.27); border-radius:13px; padding:14px 15px; backdrop-filter:blur(10px); box-shadow:0 12px 40px #0008; }
+    .label { display:flex; justify-content:space-between; font-size:10px; letter-spacing:.12em; text-transform:uppercase; margin:9px 0 5px; color:#b8e3e8 }
+    .bar { height:7px; background:#102630; border-radius:5px; overflow:hidden }.fill { height:100%; border-radius:5px; transition:width .12s }
+    #heat { background:linear-gradient(90deg,#36e6ef,#ffc34f,#f65757) } #energy { background:#70a9ff }
+    #inventory { position:fixed; bottom:22px; left:50%; transform:translateX(-50%); display:flex; gap:8px; pointer-events:none }
+    .chip { min-width:92px; padding:8px 11px; background:var(--panel); border:1px solid #2e5d69; border-radius:9px; font-size:11px; text-transform:uppercase; letter-spacing:.07em }.chip b { color:var(--cyan); float:right }
+    #tip { position:fixed; bottom:20px; left:25px; max-width:320px; color:#a7c9d0; font-size:12px; pointer-events:none }
+    #notice { position:fixed; left:50%; top:47%; transform:translate(-50%,-50%); font-weight:800; letter-spacing:.13em; text-transform:uppercase; font-size:22px; color:#ecffff; text-shadow:0 3px 20px #000; opacity:0; transition:opacity .2s; pointer-events:none }
+    kbd { border:1px solid #52717a; border-bottom-width:2px; border-radius:4px; padding:1px 4px; color:#e5ffff; font:10px monospace }
+    @media(max-width:650px) { #hud{right:10px;top:10px;width:180px} #brand{top:14px;left:15px} #tip{left:15px;bottom:65px} .chip{min-width:78px} }
+  </style>
+</head>
+<body>
+  <canvas id="world"></canvas>
+  <div id="brand">DeepCore<small>Worlds Beneath · Expedition 01</small></div>
+  <section id="hud"><div class="label"><span>Plasma drill heat</span><span id="heatText">0%</span></div><div class="bar"><div class="fill" id="heat"></div></div><div class="label"><span>Suit energy</span><span id="energyText">100%</span></div><div class="bar"><div class="fill" id="energy"></div></div><div class="label"><span>Depth</span><span id="depth">0 m</span></div><div class="label"><span>Credits</span><span id="credits">0 CR</span></div></section>
+  <div id="inventory"><div class="chip">Ferrite <b id="iron">0</b></div><div class="chip">Crystal <b id="crystal">0</b></div><div class="chip">Coolant <b id="coolant">0</b></div></div>
+  <div id="tip">Move <kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd> · Jump <kbd>W</kbd> / <kbd>↑</kbd> · Hold click to drill. Find crystal veins deep below.</div><div id="notice"></div>
+  <script>
+  (() => {
+    const c=document.querySelector('#world'), x=c.getContext('2d'), S=28, W=110, H=72;
+    let dpr=1, scale=1, cam={x:0,y:0}, keys={}, mouse={x:0,y:0,down:false}, msgTimer=0;
+    const blocks={ air:0,soil:1,stone:2,iron:3,crystal:4,ice:5,bedrock:6 };
+    const grid=Array.from({length:H},(_,y)=>Array.from({length:W},(_,xx)=>{
+      const surface=15+Math.floor(Math.sin(xx*.21)*2+Math.sin(xx*.071)*3);
+      if(y<surface) return 0; if(y===surface) return blocks.soil;
+      if(y>H-3)return blocks.bedrock;
+      let r=Math.random(); if(y>30&&r<.026)return blocks.crystal; if(y>21&&r<.055)return blocks.iron; if(y>45&&r<.018)return blocks.ice;
+      return y<surface+4?blocks.soil:blocks.stone;
+    }));
+    // mine entrance and a few traversable passages
+    for(let y=8;y<19;y++) for(let xx=3;xx<8;xx++) grid[y][xx]=0;
+    const p={x:5.5,y:12,vx:0,vy:0,w:.62,h:.92,ground:false,energy:100,heat:0,items:{iron:0,crystal:0,coolant:2},credits:0};
+    const col={1:'#805036',2:'#41515b',3:'#a88d62',4:'#75f7ff',5:'#bceeff',6:'#191e25'};
+    function resize(){dpr=devicePixelRatio||1;c.width=innerWidth*dpr;c.height=innerHeight*dpr;c.style.width=innerWidth+'px';c.style.height=innerHeight+'px';x.setTransform(dpr,0,0,dpr,0,0);scale=Math.min(1.55,Math.max(.7,innerWidth/980));}
+    addEventListener('resize',resize);resize();
+    addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' ')e.preventDefault()});addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+    c.addEventListener('mousemove',e=>{const r=c.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top});c.addEventListener('mousedown',()=>mouse.down=true);addEventListener('mouseup',()=>mouse.down=false);
+    function solid(tx,ty){return ty>=H||tx<0||tx>=W||grid[ty]?.[tx]>0}
+    function notice(t){const n=document.querySelector('#notice');n.textContent=t;n.style.opacity=1;msgTimer=100}
+    function mine(){ if(!mouse.down||p.heat>=100||p.energy<=0)return; const wx=cam.x+(mouse.x-innerWidth/2)/S/scale,wy=cam.y+(mouse.y-innerHeight/2)/S/scale;const dx=wx-p.x,dy=wy-p.y;if(dx*dx+dy*dy>10)return;const tx=Math.floor(wx),ty=Math.floor(wy),b=grid[ty]?.[tx]; if(!b||b===6)return; p.heat=Math.min(100,p.heat+.62);p.energy=Math.max(0,p.energy-.035);if(Math.random()<.16){grid[ty][tx]=0;if(b===3){p.items.iron++;p.credits+=12;notice('Ferrite recovered')}if(b===4){p.items.crystal++;p.credits+=60;notice('Crystal core recovered')}if(b===5){p.items.coolant++;notice('Coolant capsule')} } }
+    function update(){
+      let left=keys.a||keys.arrowleft,right=keys.d||keys.arrowright; p.vx+=(right ? -.018 : 0)+(left ? .018 : 0);
+      if(left)p.vx=-.10;if(right)p.vx=.10;if(!left&&!right)p.vx*=.74;
+      if((keys.w||keys.arrowup||keys[' '])&&p.ground){p.vy=-.25;p.ground=false}p.vy=Math.min(.32,p.vy+.014);
+      let nx=p.x+p.vx;if(!solid(Math.floor(nx-(p.w/2)),Math.floor(p.y))&&!solid(Math.floor(nx+(p.w/2)),Math.floor(p.y)))p.x=nx;
+      let ny=p.y+p.vy;p.ground=false;if(p.vy>=0&&solid(Math.floor(p.x),Math.floor(ny+p.h/2))){p.y=Math.floor(ny+p.h/2)-p.h/2;p.vy=0;p.ground=true}else if(p.vy<0&&solid(Math.floor(p.x),Math.floor(ny-p.h/2))){p.vy=0}else p.y=ny;
+      mine();p.heat=Math.max(0,p.heat-(mouse.down?.13:.33));p.energy=Math.min(100,p.energy+.012);cam.x+=(p.x-cam.x)*.09;cam.y+=(p.y-cam.y)*.09;if(msgTimer&&!--msgTimer)document.querySelector('#notice').style.opacity=0;
+      document.querySelector('#heat').style.width=p.heat+'%';document.querySelector('#heatText').textContent=Math.round(p.heat)+'%';document.querySelector('#energy').style.width=p.energy+'%';document.querySelector('#energyText').textContent=Math.round(p.energy)+'%';document.querySelector('#depth').textContent=Math.max(0,Math.floor((p.y-14)*6))+' m';document.querySelector('#credits').textContent=p.credits+' CR';for(const k of ['iron','crystal','coolant'])document.querySelector('#'+k).textContent=p.items[k];
+    }
+    function draw(){x.fillStyle='#06131c';x.fillRect(0,0,innerWidth,innerHeight);x.save();x.translate(innerWidth/2,innerHeight/2);x.scale(S*scale,S*scale);x.translate(-cam.x,-cam.y);
+      // world glow and voxel tiles
+      for(let y=Math.max(0,Math.floor(cam.y-18/scale));y<Math.min(H,Math.ceil(cam.y+18/scale));y++)for(let xx=Math.max(0,Math.floor(cam.x-28/scale));xx<Math.min(W,Math.ceil(cam.x+28/scale));xx++){let b=grid[y][xx];if(!b)continue;x.fillStyle=col[b];x.fillRect(xx+.025,y+.025,.95,.95);if(b===2||b===1){x.fillStyle='rgba(255,255,255,.08)';x.fillRect(xx+.08,y+.08,.78,.08)}if(b===4){x.fillStyle='rgba(150,255,255,.3)';x.fillRect(xx-.13,y-.13,1.26,1.26);x.fillStyle='#dfffff';x.fillRect(xx+.38,y+.16,.2,.65)}if(b===3){x.fillStyle='#d6b879';x.fillRect(xx+.25,y+.3,.18,.2);x.fillRect(xx+.62,y+.58,.15,.15)}}
+      // player and plasma drill
+      x.fillStyle='#d8f4f8';x.fillRect(p.x-.28,p.y-.42,.56,.66);x.fillStyle='#276a7c';x.fillRect(p.x-.35,p.y-.52,.7,.22);x.fillStyle='#54f1ff';x.fillRect(p.x-.2,p.y-.46,.4,.05);let a=Math.atan2((cam.y+(mouse.y-innerHeight/2)/S/scale)-p.y,(cam.x+(mouse.x-innerWidth/2)/S/scale)-p.x);x.save();x.translate(p.x,p.y-.08);x.rotate(a);x.fillStyle='#5cecff';x.fillRect(.22,-.11,.75,.22);x.fillStyle='#eaffff';x.fillRect(.85,-.07,.22,.14);if(mouse.down&&p.heat<100){x.fillStyle='rgba(92,236,255,.55)';x.fillRect(1.05,-.04,.8,.08)}x.restore();x.restore();
+      // reticle
+      x.strokeStyle=p.heat>=100?'#ff5d5d':'#72f5ff';x.lineWidth=1;x.beginPath();x.arc(mouse.x,mouse.y,10,0,Math.PI*2);x.stroke();requestAnimationFrame(loop);
+    } function loop(){update();draw()}loop();
+  })();
+  </script>
+</body></html>
