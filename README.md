@@ -60,4 +60,4 @@ Every descent asks a question: push deeper for a rare Crystal Core, or return to
 
 Upload `index.html` and `README.md` to the root of a GitHub repository. For GitHub Pages, publish the `main` branch from `/ (root)`.
 
-For itch.io, create a new HTML game project, upload a ZIP containing `index.html` at the top level, select **“This file will be played in the browser”**, and save. The game needs no installation or external services.
+
