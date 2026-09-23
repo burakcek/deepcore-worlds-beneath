@@ -23,8 +23,11 @@ Death returns the player to the Surface Outpost or their Home Core, with a small
 - **Hold left click** — mine blocks or attack enemies
 - **Hold B + click** — place a steel wall (cost: 1 Ferrite)
 - **H** — deploy a Home Core (cost: 8 Ferrite + 2 Crystal Cores)
+- **R** — restart after losing all three expedition lives
 
 The Home Core heals the player and forces creatures away within its blue protective field. A player can deploy one core per expedition.
+
+Each zone is a level with its own mission objective. Reaching a new checkpoint unlocks the next level and awards credits. Hull integrity and remaining expedition lives are shown in the HUD; losing all lives ends the expedition until it is restarted with **R**.
 
 ## Zones
 
@@ -59,5 +62,4 @@ Every descent asks a question: push deeper for a rare Crystal Core, or return to
 ## Publish on GitHub Pages / itch.io
 
 Upload `index.html` and `README.md` to the root of a GitHub repository. For GitHub Pages, publish the `main` branch from `/ (root)`.
-
 
