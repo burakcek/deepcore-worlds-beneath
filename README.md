@@ -24,10 +24,14 @@ Death returns the player to the Surface Outpost or their Home Core, with a small
 - **Hold B + click** — place a steel wall (cost: 1 Ferrite)
 - **H** — deploy a Home Core (cost: 8 Ferrite + 2 Crystal Cores)
 - **R** — restart after losing all three expedition lives
+- **1 / 2 / 3** — switch between the Drill, Pulse Carbine, and Rail Beacon
+- **Hold left click with a weapon equipped** — fire a travelling projectile
 
 The Home Core heals the player and forces creatures away within its blue protective field. A player can deploy one core per expedition.
 
 Each zone is a level with its own mission objective. Reaching a new checkpoint unlocks the next level and awards credits. Hull integrity and remaining expedition lives are shown in the HUD; losing all lives ends the expedition until it is restarted with **R**.
+
+The Pulse Carbine is a medium-range automatic tool and the Rail Beacon is a slower long-range tool with higher impact. Their ammunition and cooldowns are visible in the HUD, and reaching a new level replenishes the expedition loadout. Missions vary between exploration, collection, survival, defence, and reactor rescue.
 
 ## Zones
 
@@ -62,4 +66,3 @@ Every descent asks a question: push deeper for a rare Crystal Core, or return to
 ## Publish on GitHub Pages / itch.io
 
 Upload `index.html` and `README.md` to the root of a GitHub repository. For GitHub Pages, publish the `main` branch from `/ (root)`.
-
